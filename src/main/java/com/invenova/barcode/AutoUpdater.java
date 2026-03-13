@@ -24,7 +24,7 @@ public class AutoUpdater {
     private static final String GITHUB_REPO = "invenova/barcode-agent";
     private static final String GITHUB_API_URL =
             "https://api.github.com/repos/" + GITHUB_REPO + "/releases/latest";
-    private static final long CHECK_INTERVAL_HOURS = 6;
+    private static final long CHECK_INTERVAL_HOURS = 1;
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration DOWNLOAD_TIMEOUT = Duration.ofMinutes(5);
     private static final String JVM_OPTIONS = "-Xmx512m";
