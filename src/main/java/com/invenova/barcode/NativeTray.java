@@ -20,66 +20,64 @@ public class NativeTray {
 
     // ── Win32 constants ──────────────────────────────────────────────────────
 
-    private static final int WM_APP         = 0x8000;
-    private static final int WM_TRAYICON    = WM_APP + 1;
-    private static final int WM_DESTROY     = 0x0002;
+    private static final int WM_APP          = 0x8000;
+    private static final int WM_TRAYICON     = WM_APP + 1;
+    private static final int WM_DESTROY      = 0x0002;
 
-    private static final int NIM_ADD        = 0x0;
-    private static final int NIM_MODIFY     = 0x1;
-    private static final int NIM_DELETE     = 0x2;
-    private static final int NIF_MESSAGE    = 0x1;
-    private static final int NIF_ICON       = 0x2;
-    private static final int NIF_TIP        = 0x4;
+    private static final int NIM_ADD         = 0x0;
+    private static final int NIM_MODIFY      = 0x1;
+    private static final int NIM_DELETE      = 0x2;
+    private static final int NIF_MESSAGE     = 0x1;
+    private static final int NIF_ICON        = 0x2;
+    private static final int NIF_TIP         = 0x4;
 
-    private static final int WM_RBUTTONUP      = 0x0205;
-    private static final int WM_CONTEXTMENU    = 0x007B;
+    private static final int WM_RBUTTONUP    = 0x0205;
+    private static final int WM_CONTEXTMENU  = 0x007B;
 
-    private static final int MF_STRING      = 0x0;
-    private static final int MF_SEPARATOR   = 0x800;
-    private static final int MF_GRAYED      = 0x1;
-    private static final int TPM_RETURNCMD  = 0x0100;
-    private static final int TPM_RIGHTBUTTON= 0x0002;
-    private static final int TPM_BOTTOMALIGN= 0x0020;
+    private static final int MF_STRING       = 0x0;
+    private static final int MF_SEPARATOR    = 0x800;
+    private static final int MF_GRAYED       = 0x1;
+    private static final int TPM_RETURNCMD   = 0x0100;
+    private static final int TPM_RIGHTBUTTON = 0x0002;
+    private static final int TPM_BOTTOMALIGN = 0x0020;
 
     private static final int IMAGE_ICON      = 1;
     private static final int LR_LOADFROMFILE = 0x10;
     // IDI_APPLICATION = MAKEINTRESOURCE(32512)
     private static final Pointer IDI_APPLICATION = Pointer.createConstant(32512);
-    // WS_EX_TOOLWINDOW hides the window from Alt+Tab and the taskbar button strip.
-    // Use this instead of HWND_MESSAGE: message-only windows do not receive
-    // broadcast messages (e.g. TaskbarCreated), so they cannot be used here.
+    // Hides the window from Alt+Tab and the taskbar button strip.
+    // Must use a top-level window (not HWND_MESSAGE) so TaskbarCreated broadcasts arrive.
     private static final int WS_EX_TOOLWINDOW = 0x00000080;
 
-    // Retry config for NIM_ADD at startup (Explorer may not be ready yet).
-    private static final int    NIM_ADD_RETRIES      = 6;
-    private static final long   NIM_ADD_RETRY_DELAY  = 500; // ms
+    // Retry config for NIM_ADD — Explorer may not be ready immediately at startup.
+    private static final int  NIM_ADD_RETRIES     = 6;
+    private static final long NIM_ADD_RETRY_DELAY = 500; // ms
 
-    // ── JNA extra interfaces ─────────────────────────────────────────────────
+    // ── JNA interfaces ───────────────────────────────────────────────────────
 
     interface ExtUser32 extends StdCallLibrary {
         ExtUser32 INSTANCE = Native.load("user32", ExtUser32.class, W32APIOptions.DEFAULT_OPTIONS);
 
-        HWND CreateWindowExW(int dwExStyle, WString lpClassName, WString lpWindowName,
-                             int dwStyle, int x, int y, int nWidth, int nHeight,
-                             HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, Pointer lpParam);
-
-        int RegisterClassExW(WNDCLASSEX lpwcx);
-        boolean DestroyWindow(HWND hwnd);
-        LRESULT DefWindowProcW(HWND hwnd, int msg, WPARAM wParam, LPARAM lParam);
-        boolean PostMessageW(HWND hwnd, int msg, WPARAM wParam, LPARAM lParam);
-        LRESULT DispatchMessageW(MSG msg);
-        boolean TranslateMessage(MSG msg);
-        int GetMessageW(MSG msg, HWND hwnd, int min, int max);
-        boolean GetCursorPos(POINT pt);
-        boolean SetForegroundWindow(HWND hwnd);
-        HMENU CreatePopupMenu();
-        boolean AppendMenuW(HMENU hMenu, int uFlags, int uIDNewItem, WString lpNewItem);
-        int TrackPopupMenuEx(HMENU hMenu, int uFlags, int x, int y, HWND hwnd, Pointer tpm);
-        boolean DestroyMenu(HMENU hMenu);
-        HICON LoadImageW(HINSTANCE hinst, WString name, int type, int cx, int cy, int fuLoad);
-        HICON LoadIcon(HINSTANCE hInstance, Pointer iconName);
-        boolean DestroyIcon(HICON icon);
-        int RegisterWindowMessageW(WString lpString);
+        HWND     CreateWindowExW(int dwExStyle, WString lpClassName, WString lpWindowName,
+                                 int dwStyle, int x, int y, int nWidth, int nHeight,
+                                 HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, Pointer lpParam);
+        int      RegisterClassExW(WNDCLASSEX lpwcx);
+        boolean  DestroyWindow(HWND hwnd);
+        LRESULT  DefWindowProcW(HWND hwnd, int msg, WPARAM wParam, LPARAM lParam);
+        boolean  PostMessageW(HWND hwnd, int msg, WPARAM wParam, LPARAM lParam);
+        LRESULT  DispatchMessageW(MSG msg);
+        boolean  TranslateMessage(MSG msg);
+        int      GetMessageW(MSG msg, HWND hwnd, int min, int max);
+        boolean  GetCursorPos(POINT pt);
+        boolean  SetForegroundWindow(HWND hwnd);
+        HMENU    CreatePopupMenu();
+        boolean  AppendMenuW(HMENU hMenu, int uFlags, int uIDNewItem, WString lpNewItem);
+        int      TrackPopupMenuEx(HMENU hMenu, int uFlags, int x, int y, HWND hwnd, Pointer tpm);
+        boolean  DestroyMenu(HMENU hMenu);
+        HICON    LoadImageW(HINSTANCE hinst, WString name, int type, int cx, int cy, int fuLoad);
+        HICON    LoadIcon(HINSTANCE hInstance, Pointer iconName);
+        boolean  DestroyIcon(HICON icon);
+        int      RegisterWindowMessageW(WString lpString);
     }
 
     interface ExtShell32 extends StdCallLibrary {
@@ -87,76 +85,68 @@ public class NativeTray {
         boolean Shell_NotifyIconW(int dwMessage, NOTIFYICONDATA lpdata);
     }
 
-    // NOTIFYICONDATA — full Vista+ layout (shellapi.h NOTIFYICONDATAW).
-    //
-    // The cbSize field must equal sizeof(NOTIFYICONDATA) for Shell32.dll 6.0.6+
-    // (Windows Vista and later). Earlier versions of this struct omitted the
-    // guidItem and hBalloonIcon fields, making cbSize too small (952 vs 976
-    // bytes on 64-bit), which causes Shell_NotifyIcon to fail silently on
-    // modern Windows.
-    //
-    // Field layout on 64-bit:
-    //   cbSize(4) + pad(4) + hWnd(8) + uID(4) + uFlags(4) + uCallbackMessage(4)
-    //   + pad(4) + hIcon(8) + szTip[128](256) + dwState(4) + dwStateMask(4)
-    //   + szInfo[256](512) + uTimeout(4) + szInfoTitle[64](128) + dwInfoFlags(4)
-    //   + guidItem[int×4](16) + hBalloonIcon(8) = 976 bytes
+    // ── Win32 structures ─────────────────────────────────────────────────────
+
+    /**
+     * Full Vista+ NOTIFYICONDATAW layout (shellapi.h).
+     *
+     * cbSize must reflect the complete struct size (976 bytes on 64-bit) for
+     * Shell32 6.0.6+ (Vista+). Older mappings omitting guidItem/hBalloonIcon
+     * produce 952 bytes, causing Shell_NotifyIcon to fail silently.
+     *
+     * IMPORTANT: cbSize is set in the constructor body, not as a field initializer.
+     * Java field initializers run in declaration order — calling size() before the
+     * array fields (szTip, szInfo, etc.) are initialized throws
+     * IllegalStateException("Array fields must be initialized").
+     */
     public static class NOTIFYICONDATA extends Structure {
-        // cbSize MUST be set in the constructor body, NOT as a field initializer.
-        // Java field initializers run in declaration order: if cbSize = size() were
-        // a field initializer, size() would be called before szTip/szInfo/szInfoTitle
-        // and guidItem are initialized (they would still be null), causing JNA to
-        // throw "Array fields must be initialized".
-        public int     cbSize;
-        public HWND    hWnd;
-        public int     uID   = 1;
-        public int     uFlags;
-        public int     uCallbackMessage;
-        public HICON   hIcon;
-        public char[]  szTip       = new char[128];
-        public int     dwState;
-        public int     dwStateMask;
-        public char[]  szInfo      = new char[256];
-        public int     uTimeout;                     // union with uVersion
-        public char[]  szInfoTitle = new char[64];
-        public int     dwInfoFlags;
-        // Vista+: GUID guidItem — represented as int[4] for correct 4-byte alignment
-        public int[]   guidItem    = new int[4];
-        // Vista+: HICON hBalloonIcon
-        public HICON   hBalloonIcon;
+        public int    cbSize;
+        public HWND   hWnd;
+        public int    uID            = 1;
+        public int    uFlags;
+        public int    uCallbackMessage;
+        public HICON  hIcon;
+        public char[] szTip          = new char[128];
+        public int    dwState;
+        public int    dwStateMask;
+        public char[] szInfo         = new char[256];
+        public int    uTimeout;       // union with uVersion
+        public char[] szInfoTitle    = new char[64];
+        public int    dwInfoFlags;
+        public int[]  guidItem       = new int[4];   // GUID — 4-byte aligned
+        public HICON  hBalloonIcon;
 
         public NOTIFYICONDATA() {
-            // All array fields are now initialized — safe to call size().
-            cbSize = size();
+            cbSize = size();           // safe: all array fields are already initialized
         }
 
         @Override
         protected List<String> getFieldOrder() {
-            return List.of("cbSize","hWnd","uID","uFlags","uCallbackMessage",
-                    "hIcon","szTip","dwState","dwStateMask","szInfo",
-                    "uTimeout","szInfoTitle","dwInfoFlags","guidItem","hBalloonIcon");
+            return List.of("cbSize", "hWnd", "uID", "uFlags", "uCallbackMessage",
+                    "hIcon", "szTip", "dwState", "dwStateMask", "szInfo",
+                    "uTimeout", "szInfoTitle", "dwInfoFlags", "guidItem", "hBalloonIcon");
         }
     }
 
-    // WNDCLASSEX
     public static class WNDCLASSEX extends Structure {
-        public int      cbSize = size();
-        public int      style;
-        public Callback lpfnWndProc;
-        public int      cbClsExtra;
-        public int      cbWndExtra;
+        public int       cbSize = size();
+        public int       style;
+        public Callback  lpfnWndProc;
+        public int       cbClsExtra;
+        public int       cbWndExtra;
         public HINSTANCE hInstance;
-        public HICON    hIcon;
-        public HCURSOR  hCursor;
-        public HBRUSH   hbrBackground;
-        public WString  lpszMenuName;
-        public WString  lpszClassName;
-        public HICON    hIconSm;
+        public HICON     hIcon;
+        public HCURSOR   hCursor;
+        public HBRUSH    hbrBackground;
+        public WString   lpszMenuName;
+        public WString   lpszClassName;
+        public HICON     hIconSm;
 
         @Override
         protected List<String> getFieldOrder() {
-            return List.of("cbSize","style","lpfnWndProc","cbClsExtra","cbWndExtra",
-                    "hInstance","hIcon","hCursor","hbrBackground",
-                    "lpszMenuName","lpszClassName","hIconSm");
+            return List.of("cbSize", "style", "lpfnWndProc", "cbClsExtra", "cbWndExtra",
+                    "hInstance", "hIcon", "hCursor", "hbrBackground",
+                    "lpszMenuName", "lpszClassName", "hIconSm");
         }
     }
 
@@ -167,9 +157,9 @@ public class NativeTray {
     // ── Menu item model ──────────────────────────────────────────────────────
 
     public static class MenuItem {
-        final String   label;      // null = separator
-        volatile boolean enabled;
-        final Runnable action;
+        final String         label;    // null = separator
+        volatile boolean     enabled;
+        final Runnable       action;
 
         private MenuItem(String label, boolean enabled, Runnable action) {
             this.label   = label;
@@ -177,30 +167,26 @@ public class NativeTray {
             this.action  = action;
         }
 
-        public static MenuItem item(String label, Runnable action)          { return new MenuItem(label, true,  action); }
-        public static MenuItem item(String label, boolean enabled, Runnable action) { return new MenuItem(label, enabled, action); }
-        public static MenuItem disabled(String label)                        { return new MenuItem(label, false, null);  }
-        public static MenuItem separator()                                   { return new MenuItem(null,  false, null);  }
+        public static MenuItem item(String label, Runnable action)                        { return new MenuItem(label, true,  action); }
+        public static MenuItem item(String label, boolean enabled, Runnable action)       { return new MenuItem(label, enabled, action); }
+        public static MenuItem disabled(String label)                                     { return new MenuItem(label, false, null); }
+        public static MenuItem separator()                                                { return new MenuItem(null,  false, null); }
     }
 
     // ── State ────────────────────────────────────────────────────────────────
 
-    private final String          tooltip;
-    private final String          iconPath;   // absolute path to .ico; null = no icon
-    private final List<MenuItem>  menuItems;
+    private final String         tooltip;
+    private final String         iconPath;   // absolute path to .ico; null = system default
+    private final List<MenuItem> menuItems;
 
-    private HWND              hwnd;
-    private HICON             hIcon;
-    private NOTIFYICONDATA    nid;
-    private volatile String   statusText = "";
-    // Message ID for the "TaskbarCreated" broadcast — sent by Windows whenever
-    // Explorer recreates the taskbar (also fires on first login, covering the
-    // startup race condition where Explorer wasn't ready at NIM_ADD time).
-    private int               wmTaskbarCreated = 0;
-    // Held as a field to prevent GC — JIT may mark the local variable dead after
-    // RegisterClassExW() returns, freeing the native function pointer while the
-    // message loop is still dispatching callbacks.
-    private Callback          wndProcRef;
+    private HWND             hwnd;
+    private HICON            hIcon;
+    private NOTIFYICONDATA   nid;
+    private volatile String  statusText   = "";
+    private int              wmTaskbarCreated = 0;
+    // Held as a field — prevents the JIT from marking the local dead after
+    // RegisterClassExW() returns and allowing GC to free the native callback.
+    private Callback         wndProcRef;
 
     public NativeTray(String tooltip, String iconPath, List<MenuItem> menuItems) {
         this.tooltip   = tooltip;
@@ -236,145 +222,105 @@ public class NativeTray {
 
     private void messageLoop() {
         try {
-            messageLoopImpl();
+            ExtUser32 u32 = ExtUser32.INSTANCE;
+
+            // GetModuleHandle(null) returns the current process exe handle.
+            // RegisterClassExW requires a valid hInstance — passing null fails silently.
+            HINSTANCE hInst = new HINSTANCE();
+            hInst.setPointer(
+                    com.sun.jna.platform.win32.Kernel32.INSTANCE.GetModuleHandle(null).getPointer());
+
+            // wndProcRef is a field (not a local) to prevent the JIT from freeing
+            // the native callback stub while the message loop is still running.
+            wndProcRef = (hwnd, msg, wp, lp) -> handleMsg(hwnd, msg, wp, lp);
+
+            WNDCLASSEX wc = new WNDCLASSEX();
+            wc.hInstance     = hInst;
+            wc.lpfnWndProc   = wndProcRef;
+            wc.lpszClassName = new WString("BarcodeAgentTray");
+            int atom = u32.RegisterClassExW(wc);
+            if (atom == 0) {
+                int err = Native.getLastError();
+                if (err != 1410) { // 1410 = ERROR_CLASS_ALREADY_EXISTS — harmless
+                    RemoteLogger.error("tray", "RegisterClassExW failed — Win32 error " + err);
+                    return;
+                }
+            }
+
+            // Hidden top-level window (not HWND_MESSAGE):
+            //   • HWND_MESSAGE windows never receive broadcast messages, so
+            //     TaskbarCreated would never fire.
+            //   • WS_EX_TOOLWINDOW keeps it out of Alt-Tab and the taskbar strip.
+            //   • dwStyle=0 (no WS_VISIBLE) keeps it invisible.
+            hwnd = u32.CreateWindowExW(WS_EX_TOOLWINDOW,
+                    new WString("BarcodeAgentTray"), new WString(""),
+                    0, 0, 0, 0, 0,
+                    null, null, hInst, null);
+            if (hwnd == null) {
+                RemoteLogger.error("tray", "CreateWindowExW failed — Win32 error " + Native.getLastError());
+                return;
+            }
+
+            // Register for TaskbarCreated — broadcast when Explorer (re)creates the
+            // taskbar, covering both Explorer crashes and the startup race condition.
+            wmTaskbarCreated = u32.RegisterWindowMessageW(new WString("TaskbarCreated"));
+
+            // Load icon at 16×16 (native tray size). Fall back to system default.
+            if (iconPath != null) {
+                hIcon = u32.LoadImageW(null, new WString(iconPath), IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
+                if (hIcon == null)
+                    hIcon = u32.LoadImageW(null, new WString(iconPath), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+            }
+            if (hIcon == null)
+                hIcon = u32.LoadIcon(null, IDI_APPLICATION);
+
+            nid = new NOTIFYICONDATA();
+            nid.hWnd             = hwnd;
+            nid.uFlags           = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+            nid.uCallbackMessage = WM_TRAYICON;
+            nid.hIcon            = hIcon;
+            setTip(nid, tooltip);
+
+            addTrayIcon();
+
+            MSG msg = new MSG();
+            while (u32.GetMessageW(msg, null, 0, 0) != 0) {
+                u32.TranslateMessage(msg);
+                u32.DispatchMessageW(msg);
+            }
+
+            ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_DELETE, nid);
+            if (hIcon != null) u32.DestroyIcon(hIcon);
+            if (hwnd  != null) u32.DestroyWindow(hwnd);
+
         } catch (Throwable t) {
             RemoteLogger.error("tray", "messageLoop crashed: " + t);
         }
     }
 
-    private void messageLoopImpl() {
-        ExtUser32 u32 = ExtUser32.INSTANCE;
-
-        // Get the current process module handle — required by RegisterClassExW.
-        // Passing null hInstance causes RegisterClassExW to fail silently on
-        // some Windows configurations, which then makes CreateWindowExW fail.
-        HINSTANCE hInst = new HINSTANCE();
-        hInst.setPointer(
-                com.sun.jna.platform.win32.Kernel32.INSTANCE.GetModuleHandle(null).getPointer());
-
-        // Store wndProc as a field so the GC cannot free the native function
-        // pointer after RegisterClassExW() returns (JIT may mark a local var
-        // dead at that point while the message loop still needs the callback).
-        wndProcRef = (hwnd, msg, wp, lp) -> handleMsg(hwnd, msg, wp, lp);
-
-        WNDCLASSEX wc = new WNDCLASSEX();
-        wc.hInstance     = hInst;
-        wc.lpfnWndProc   = wndProcRef;
-        wc.lpszClassName = new WString("BarcodeAgentTray");
-        int atom = u32.RegisterClassExW(wc);
-        if (atom == 0) {
-            int err = Native.getLastError();
-            // 1410 = ERROR_CLASS_ALREADY_EXISTS — harmless, class is still registered
-            if (err != 1410) {
-                RemoteLogger.error("tray", "RegisterClassExW failed — Win32 error " + err);
-                return;
-            }
-            RemoteLogger.info("tray", "RegisterClassExW: class already exists (err=1410), continuing");
-        }
-
-        // Create a hidden top-level window.
-        //
-        // We intentionally do NOT use HWND_MESSAGE (-3) as the parent:
-        //   1. On some Windows 10 configurations CreateWindowExW returns
-        //      ERROR_INVALID_WINDOW_HANDLE (1400) when HWND_MESSAGE is used.
-        //   2. Message-only windows never receive broadcast messages, so
-        //      the TaskbarCreated notification would never arrive.
-        //
-        // Instead we create a top-level window (null parent) with dwStyle=0
-        // (no WS_VISIBLE) so it is invisible, and WS_EX_TOOLWINDOW so it is
-        // excluded from the Alt-Tab switcher and the taskbar button strip.
-        hwnd = u32.CreateWindowExW(WS_EX_TOOLWINDOW,
-                new WString("BarcodeAgentTray"), new WString(""),
-                0, 0, 0, 0, 0,
-                null, null, hInst, null);
-
-        if (hwnd == null) {
-            int err = Native.getLastError();
-            RemoteLogger.error("tray", "CreateWindowExW failed — Win32 error " + err);
-            return;
-        }
-
-        // Subscribe to TaskbarCreated — Windows broadcasts this whenever the
-        // taskbar shell is (re)created. Handling it lets us re-add the icon
-        // if Explorer restarts, and also covers the startup race where Explorer
-        // wasn't ready when the app first called NIM_ADD.
-        wmTaskbarCreated = u32.RegisterWindowMessageW(new WString("TaskbarCreated"));
-
-        // Load icon — request 16x16 (tray icon size) explicitly.
-        // LR_DEFAULTSIZE requests SM_CXICON (32x32) which is wrong for the tray.
-        // Fall back to IDI_APPLICATION if the custom icon fails to load.
-        if (iconPath != null) {
-            hIcon = u32.LoadImageW(null, new WString(iconPath), IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
-            if (hIcon == null) {
-                hIcon = u32.LoadImageW(null, new WString(iconPath), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
-            }
-        }
-        if (hIcon == null) {
-            RemoteLogger.info("tray", "Custom icon not loaded — falling back to IDI_APPLICATION");
-            hIcon = u32.LoadIcon(null, IDI_APPLICATION);
-        }
-        if (hIcon == null) {
-            RemoteLogger.error("tray", "LoadIcon(IDI_APPLICATION) failed — proceeding without icon");
-        }
-
-        // Build the NOTIFYICONDATA once so it can be reused by TaskbarCreated.
-        // cbSize must equal sizeof(NOTIFYICONDATA) for Shell32.dll 6.0.6+ (Vista+).
-        nid = new NOTIFYICONDATA();
-        RemoteLogger.info("tray", "NOTIFYICONDATA cbSize=" + nid.cbSize);
-        nid.hWnd             = hwnd;
-        nid.uFlags           = NIF_MESSAGE | NIF_ICON | NIF_TIP;
-        nid.uCallbackMessage = WM_TRAYICON;
-        nid.hIcon            = hIcon;
-        setTip(nid, tooltip);
-
-        // Register tray icon with retries.
-        // When the app starts with Windows, Explorer may not have finished
-        // creating the taskbar yet. Retry up to NIM_ADD_RETRIES times before
-        // giving up — TaskbarCreated will fire and re-add the icon if Explorer
-        // becomes ready after the retry window expires.
-        addTrayIcon();
-
-        // Message pump
-        MSG msg = new MSG();
-        while (u32.GetMessageW(msg, null, 0, 0) != 0) {
-            u32.TranslateMessage(msg);
-            u32.DispatchMessageW(msg);
-        }
-
-        // Cleanup
-        ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_DELETE, nid);
-        if (hIcon != null) u32.DestroyIcon(hIcon);
-        if (hwnd  != null) u32.DestroyWindow(hwnd);
-    }
-
     private void addTrayIcon() {
         for (int attempt = 1; attempt <= NIM_ADD_RETRIES; attempt++) {
-            if (ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_ADD, nid)) {
-                RemoteLogger.info("tray", "NIM_ADD succeeded on attempt " + attempt);
-                return;
-            }
-            int err = Native.getLastError();
-            RemoteLogger.error("tray", "NIM_ADD attempt " + attempt + " failed — Win32 error " + err);
+            if (ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_ADD, nid)) return;
             try { Thread.sleep(NIM_ADD_RETRY_DELAY); } catch (InterruptedException ignored) {}
         }
-        RemoteLogger.error("tray", "NIM_ADD exhausted all " + NIM_ADD_RETRIES + " retries — waiting for TaskbarCreated");
+        RemoteLogger.error("tray", "Shell_NotifyIcon(NIM_ADD) failed after "
+                + NIM_ADD_RETRIES + " attempts — Win32 error " + Native.getLastError()
+                + ". Will retry on next TaskbarCreated broadcast.");
     }
+
+    // ── Message handler ──────────────────────────────────────────────────────
 
     private LRESULT handleMsg(HWND hwnd, int msg, WPARAM wp, LPARAM lp) {
         ExtUser32 u32 = ExtUser32.INSTANCE;
         if (msg == WM_TRAYICON) {
             int event = lp.intValue() & 0xFFFF;
-            if (event == WM_RBUTTONUP || event == WM_CONTEXTMENU) {
-                showContextMenu();
-            }
+            if (event == WM_RBUTTONUP || event == WM_CONTEXTMENU) showContextMenu();
             return new LRESULT(0);
         }
         if (msg == WM_DESTROY) {
             User32.INSTANCE.PostQuitMessage(0);
             return new LRESULT(0);
         }
-        // Re-register the tray icon whenever Explorer recreates the taskbar.
-        // This covers both Explorer crashes/restarts and the startup race.
         if (wmTaskbarCreated != 0 && msg == wmTaskbarCreated && nid != null) {
             ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_ADD, nid);
             return new LRESULT(0);
@@ -382,18 +328,18 @@ public class NativeTray {
         return u32.DefWindowProcW(hwnd, msg, wp, lp);
     }
 
+    // ── Context menu ─────────────────────────────────────────────────────────
+
     private void showContextMenu() {
         ExtUser32 u32 = ExtUser32.INSTANCE;
         HMENU hMenu = u32.CreatePopupMenu();
 
-        // Status line (greyed)
         String status = statusText;
         if (status != null && !status.isEmpty()) {
             u32.AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, new WString(status));
             u32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
         }
 
-        // Menu items — cmdId = nextId + i (separators use cmdId 0 and can't be clicked)
         int nextId = 1;
         for (int i = 0; i < menuItems.size(); i++) {
             MenuItem item = menuItems.get(i);
@@ -408,14 +354,11 @@ public class NativeTray {
         POINT pt = new POINT();
         u32.GetCursorPos(pt);
         u32.SetForegroundWindow(hwnd);
-
         int cmd = u32.TrackPopupMenuEx(hMenu,
                 TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_BOTTOMALIGN,
                 pt.x, pt.y, hwnd, null);
-
         u32.DestroyMenu(hMenu);
 
-        // Dispatch — recover item index from cmdId arithmetic
         if (cmd > 0) {
             int idx = cmd - nextId;
             if (idx >= 0 && idx < menuItems.size()) {
