@@ -73,7 +73,7 @@ public class BarcodeAgentApp {
         });
         autoUpdater.setOnStatusMessage(tray::setStatus);
 
-        tray.setStatus("Barcode print service is running.");
+        tray.setStatus("Running on port " + PORT + ".");
         return tray;
     }
 
