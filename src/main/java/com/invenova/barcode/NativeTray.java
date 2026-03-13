@@ -45,6 +45,10 @@ public class NativeTray {
     private static final int LR_LOADFROMFILE = 0x10;
     // IDI_APPLICATION = MAKEINTRESOURCE(32512)
     private static final Pointer IDI_APPLICATION = Pointer.createConstant(32512);
+    // WS_EX_TOOLWINDOW hides the window from Alt+Tab and the taskbar button strip.
+    // Use this instead of HWND_MESSAGE: message-only windows do not receive
+    // broadcast messages (e.g. TaskbarCreated), so they cannot be used here.
+    private static final int WS_EX_TOOLWINDOW = 0x00000080;
 
     // Retry config for NIM_ADD at startup (Explorer may not be ready yet).
     private static final int    NIM_ADD_RETRIES      = 6;
@@ -258,12 +262,21 @@ public class NativeTray {
             RemoteLogger.info("tray", "RegisterClassExW: class already exists (err=1410), continuing");
         }
 
-        // Create message-only window
-        hwnd = u32.CreateWindowExW(0,
+        // Create a hidden top-level window.
+        //
+        // We intentionally do NOT use HWND_MESSAGE (-3) as the parent:
+        //   1. On some Windows 10 configurations CreateWindowExW returns
+        //      ERROR_INVALID_WINDOW_HANDLE (1400) when HWND_MESSAGE is used.
+        //   2. Message-only windows never receive broadcast messages, so
+        //      the TaskbarCreated notification would never arrive.
+        //
+        // Instead we create a top-level window (null parent) with dwStyle=0
+        // (no WS_VISIBLE) so it is invisible, and WS_EX_TOOLWINDOW so it is
+        // excluded from the Alt-Tab switcher and the taskbar button strip.
+        hwnd = u32.CreateWindowExW(WS_EX_TOOLWINDOW,
                 new WString("BarcodeAgentTray"), new WString(""),
                 0, 0, 0, 0, 0,
-                new HWND(Pointer.createConstant(-3)), // HWND_MESSAGE
-                null, hInst, null);
+                null, null, hInst, null);
 
         if (hwnd == null) {
             int err = Native.getLastError();
