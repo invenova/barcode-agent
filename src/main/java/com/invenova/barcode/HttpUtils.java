@@ -17,11 +17,11 @@ public class HttpUtils {
         String origin = exchange.getRequestHeaders().getFirst("Origin");
         if (origin != null && ALLOWED_ORIGINS.contains(origin)) {
             exchange.getResponseHeaders().set("Access-Control-Allow-Origin", origin);
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+            exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
         }
-        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
-        exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
     }
 
     /**

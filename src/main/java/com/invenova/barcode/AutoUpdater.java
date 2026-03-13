@@ -73,7 +73,7 @@ public class AutoUpdater {
     }
 
     public void startBackgroundChecks() {
-        scheduler.scheduleAtFixedRate(this::checkAndDownload, 0, CHECK_INTERVAL_HOURS, TimeUnit.HOURS);
+        scheduler.scheduleWithFixedDelay(this::checkAndDownload, 0, CHECK_INTERVAL_HOURS, TimeUnit.HOURS);
     }
 
     public void shutdown() {
@@ -137,7 +137,9 @@ public class AutoUpdater {
 
             notifyStatus("Downloading update v" + latestVersion + "...");
 
-            if (downloadUpdate(downloadUrl, latestVersion)) {
+            String safeVersion = latestVersion.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+            if (downloadUpdate(downloadUrl, safeVersion)) {
                 RemoteLogger.info("auto-updater", "Auto-applying update v" + latestVersion + "...");
                 notifyStatus("Applying update v" + latestVersion + ". Restarting...");
                 applyUpdate();

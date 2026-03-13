@@ -10,10 +10,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class BarcodeAgentApp {
 
     private static final int PORT = 8083;
-    private static AutoUpdater autoUpdater;
 
     public static void main(String[] args) throws Exception {
-        autoUpdater = new AutoUpdater();
+        AutoUpdater autoUpdater = new AutoUpdater();
         autoUpdater.cleanupAfterUpdate();
 
         StartupManager.enableStartup();
@@ -21,12 +20,12 @@ public class BarcodeAgentApp {
         HttpApiServer apiServer = new HttpApiServer(PORT);
         apiServer.start();
 
-        NativeTray tray = buildTray(apiServer);
+        NativeTray tray = buildTray(autoUpdater, apiServer);
         tray.show();
         autoUpdater.startBackgroundChecks();
     }
 
-    private static NativeTray buildTray(HttpApiServer server) throws Exception {
+    private static NativeTray buildTray(AutoUpdater autoUpdater, HttpApiServer server) throws Exception {
         String iconPath = extractIcon();
 
         AtomicReference<NativeTray> trayRef = new AtomicReference<>();
