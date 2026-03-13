@@ -37,8 +37,8 @@ public class AutoUpdater {
     private final String currentVersion;
     private final HttpClient httpClient;
     private final ScheduledExecutorService scheduler;
-    private Consumer<String> onUpdateDownloaded;
-    private Consumer<String> onStatusMessage;
+    private volatile Consumer<String> onStatusMessage;
+    private volatile Runnable beforeExit;
 
     public AutoUpdater() {
         this.jarPath = resolveJarPath();
@@ -56,8 +56,8 @@ public class AutoUpdater {
         });
     }
 
-    public void setOnUpdateDownloaded(Consumer<String> callback) {
-        this.onUpdateDownloaded = callback;
+    public void setBeforeExit(Runnable callback) {
+        this.beforeExit = callback;
     }
 
     public void setOnStatusMessage(Consumer<String> callback) {
@@ -73,7 +73,7 @@ public class AutoUpdater {
     }
 
     public void startBackgroundChecks() {
-        scheduler.scheduleAtFixedRate(this::checkAndDownload, 0, CHECK_INTERVAL_HOURS, TimeUnit.HOURS);
+        scheduler.scheduleWithFixedDelay(this::checkAndDownload, 0, CHECK_INTERVAL_HOURS, TimeUnit.HOURS);
     }
 
     public void checkNow() {
@@ -84,7 +84,7 @@ public class AutoUpdater {
         scheduler.shutdownNow();
     }
 
-    public boolean applyUpdate(Runnable beforeExit) {
+    public boolean applyUpdate() {
         Path stagedJar = findStagedJar();
         if (stagedJar == null) return false;
 
@@ -141,8 +141,12 @@ public class AutoUpdater {
 
             notifyStatus("Downloading update v" + latestVersion + "...");
 
-            if (downloadUpdate(downloadUrl, latestVersion) && onUpdateDownloaded != null) {
-                onUpdateDownloaded.accept(latestVersion);
+            String safeVersion = latestVersion.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+            if (downloadUpdate(downloadUrl, safeVersion)) {
+                RemoteLogger.info("auto-updater", "Auto-applying update v" + latestVersion + "...");
+                notifyStatus("Applying update v" + latestVersion + ". Restarting...");
+                applyUpdate();
             }
         } catch (Exception e) {
             RemoteLogger.error("auto-updater", "Error checking for updates: " + e.getMessage());

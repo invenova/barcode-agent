@@ -43,7 +43,7 @@ public class BarcodePrintHandler implements HttpHandler {
 
         try {
             InputStream is = exchange.getRequestBody();
-            JSONObject json = new JSONObject(new String(is.readAllBytes(), StandardCharsets.UTF_8));
+            JSONObject json = new JSONObject(new String(is.readNBytes(1024 * 1024), StandardCharsets.UTF_8));
 
             String printerName = json.optString("printerName", "").trim();
             if (printerName.isEmpty()) {

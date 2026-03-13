@@ -3,6 +3,7 @@ package com.invenova.barcode;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 public class HttpApiServer {
 
@@ -14,7 +15,7 @@ public class HttpApiServer {
             server.createContext("/barcode-print", new BarcodePrintHandler());
             server.createContext("/barcode-printers", new BarcodePrinterListHandler());
             server.createContext("/setup-printer", new PrinterSetupHandler());
-            server.setExecutor(null);
+            server.setExecutor(Executors.newFixedThreadPool(4));
         } catch (IOException e) {
             throw new RuntimeException("Failed to create HTTP server", e);
         }

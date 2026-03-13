@@ -5,18 +5,26 @@ import org.json.JSONObject;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Fire-and-forget logger that POSTs structured log entries to the
  * invenova-barcode backend so they appear in the server logs.
  *
- * Calls never block the calling thread — each send runs on a short-lived
- * daemon thread.  Network failures are silently swallowed.
+ * Calls never block the calling thread — each send is queued on a single
+ * shared daemon thread.  Network failures are silently swallowed.
  */
 public final class RemoteLogger {
 
     private static final String ENDPOINT = "https://barcode-app.invenova.lk/api/agent-log";
     private static final int TIMEOUT_MS  = 4000;
+
+    private static final ExecutorService POOL = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "remote-log");
+        t.setDaemon(true);
+        return t;
+    });
 
     private RemoteLogger() {}
 
@@ -35,7 +43,7 @@ public final class RemoteLogger {
                 .put("message", message)
                 .toString();
 
-        Thread t = new Thread(() -> {
+        POOL.execute(() -> {
             try {
                 HttpURLConnection conn = (HttpURLConnection) new URL(ENDPOINT).openConnection();
                 conn.setRequestMethod("POST");
@@ -51,8 +59,6 @@ public final class RemoteLogger {
             } catch (Exception ignored) {
                 // never block the caller on network errors
             }
-        }, "remote-log");
-        t.setDaemon(true);
-        t.start();
+        });
     }
 }
