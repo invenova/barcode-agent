@@ -27,17 +27,21 @@ public class BarcodeAgentApp {
     private static NativeTray buildTray(HttpApiServer server) throws Exception {
         String iconPath = extractIcon();
 
+        NativeTray[] trayHolder = new NativeTray[1];
+
         List<NativeTray.MenuItem> items = List.of(
                 NativeTray.MenuItem.disabled("Version: " + autoUpdater.getCurrentVersion()),
                 NativeTray.MenuItem.separator(),
                 NativeTray.MenuItem.item("Exit", () -> {
                     autoUpdater.shutdown();
                     server.stop();
+                    if (trayHolder[0] != null) trayHolder[0].shutdown();
                     System.exit(0);
                 })
         );
 
         NativeTray tray = new NativeTray("Invenova Barcode Agent", iconPath, items);
+        trayHolder[0] = tray;
 
         autoUpdater.setBeforeExit(() -> {
             autoUpdater.shutdown();
