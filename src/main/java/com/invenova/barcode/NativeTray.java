@@ -59,7 +59,7 @@ public class NativeTray {
                              int dwStyle, int x, int y, int nWidth, int nHeight,
                              HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, Pointer lpParam);
 
-        ATOM RegisterClassExW(WNDCLASSEX lpwcx);
+        int RegisterClassExW(WNDCLASSEX lpwcx);
         boolean DestroyWindow(HWND hwnd);
         LRESULT DefWindowProcW(HWND hwnd, int msg, WPARAM wParam, LPARAM lParam);
         boolean PostMessageW(HWND hwnd, int msg, WPARAM wParam, LPARAM lParam);
@@ -183,6 +183,10 @@ public class NativeTray {
     // Explorer recreates the taskbar (also fires on first login, covering the
     // startup race condition where Explorer wasn't ready at NIM_ADD time).
     private int               wmTaskbarCreated = 0;
+    // Held as a field to prevent GC — JIT may mark the local variable dead after
+    // RegisterClassExW() returns, freeing the native function pointer while the
+    // message loop is still dispatching callbacks.
+    private Callback          wndProcRef;
 
     public NativeTray(String tooltip, String iconPath, List<MenuItem> menuItems) {
         this.tooltip   = tooltip;
@@ -227,22 +231,43 @@ public class NativeTray {
     private void messageLoopImpl() {
         ExtUser32 u32 = ExtUser32.INSTANCE;
 
-        // Register window class
-        Callback wndProc = (hwnd, msg, wp, lp) -> handleMsg(hwnd, msg, wp, lp);
+        // Get the current process module handle — required by RegisterClassExW.
+        // Passing null hInstance causes RegisterClassExW to fail silently on
+        // some Windows configurations, which then makes CreateWindowExW fail.
+        HINSTANCE hInst = new HINSTANCE();
+        hInst.setPointer(
+                com.sun.jna.platform.win32.Kernel32.INSTANCE.GetModuleHandle(null).getPointer());
+
+        // Store wndProc as a field so the GC cannot free the native function
+        // pointer after RegisterClassExW() returns (JIT may mark a local var
+        // dead at that point while the message loop still needs the callback).
+        wndProcRef = (hwnd, msg, wp, lp) -> handleMsg(hwnd, msg, wp, lp);
+
         WNDCLASSEX wc = new WNDCLASSEX();
-        wc.lpfnWndProc  = wndProc;
+        wc.hInstance     = hInst;
+        wc.lpfnWndProc   = wndProcRef;
         wc.lpszClassName = new WString("BarcodeAgentTray");
-        u32.RegisterClassExW(wc);
+        int atom = u32.RegisterClassExW(wc);
+        if (atom == 0) {
+            int err = Native.getLastError();
+            // 1410 = ERROR_CLASS_ALREADY_EXISTS — harmless, class is still registered
+            if (err != 1410) {
+                RemoteLogger.error("tray", "RegisterClassExW failed — Win32 error " + err);
+                return;
+            }
+            RemoteLogger.info("tray", "RegisterClassExW: class already exists (err=1410), continuing");
+        }
 
         // Create message-only window
         hwnd = u32.CreateWindowExW(0,
                 new WString("BarcodeAgentTray"), new WString(""),
                 0, 0, 0, 0, 0,
                 new HWND(Pointer.createConstant(-3)), // HWND_MESSAGE
-                null, null, null);
+                null, hInst, null);
 
         if (hwnd == null) {
-            RemoteLogger.error("tray", "CreateWindowExW failed — hwnd is null");
+            int err = Native.getLastError();
+            RemoteLogger.error("tray", "CreateWindowExW failed — Win32 error " + err);
             return;
         }
 
