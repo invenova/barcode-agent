@@ -101,7 +101,12 @@ public class NativeTray {
     //   + szInfo[256](512) + uTimeout(4) + szInfoTitle[64](128) + dwInfoFlags(4)
     //   + guidItem[int×4](16) + hBalloonIcon(8) = 976 bytes
     public static class NOTIFYICONDATA extends Structure {
-        public int     cbSize = size();
+        // cbSize MUST be set in the constructor body, NOT as a field initializer.
+        // Java field initializers run in declaration order: if cbSize = size() were
+        // a field initializer, size() would be called before szTip/szInfo/szInfoTitle
+        // and guidItem are initialized (they would still be null), causing JNA to
+        // throw "Array fields must be initialized".
+        public int     cbSize;
         public HWND    hWnd;
         public int     uID   = 1;
         public int     uFlags;
@@ -118,6 +123,11 @@ public class NativeTray {
         public int[]   guidItem    = new int[4];
         // Vista+: HICON hBalloonIcon
         public HICON   hBalloonIcon;
+
+        public NOTIFYICONDATA() {
+            // All array fields are now initialized — safe to call size().
+            cbSize = size();
+        }
 
         @Override
         protected List<String> getFieldOrder() {
