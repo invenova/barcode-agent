@@ -37,8 +37,8 @@ public class AutoUpdater {
     private final String currentVersion;
     private final HttpClient httpClient;
     private final ScheduledExecutorService scheduler;
-    private Consumer<String> onStatusMessage;
-    private Runnable beforeExit;
+    private volatile Consumer<String> onStatusMessage;
+    private volatile Runnable beforeExit;
 
     public AutoUpdater() {
         this.jarPath = resolveJarPath();
@@ -80,7 +80,7 @@ public class AutoUpdater {
         scheduler.shutdownNow();
     }
 
-    public boolean applyUpdate(Runnable extraBeforeExit) {
+    public boolean applyUpdate() {
         Path stagedJar = findStagedJar();
         if (stagedJar == null) return false;
 
@@ -93,7 +93,6 @@ public class AutoUpdater {
             Path script = writeUpdateScript(jarPath, stagedJar);
             launchUpdateScript(script);
             if (beforeExit != null) beforeExit.run();
-            if (extraBeforeExit != null) extraBeforeExit.run();
             System.exit(0);
             return true;
         } catch (IOException e) {
@@ -141,7 +140,7 @@ public class AutoUpdater {
             if (downloadUpdate(downloadUrl, latestVersion)) {
                 RemoteLogger.info("auto-updater", "Auto-applying update v" + latestVersion + "...");
                 notifyStatus("Applying update v" + latestVersion + ". Restarting...");
-                applyUpdate(null);
+                applyUpdate();
             }
         } catch (Exception e) {
             RemoteLogger.error("auto-updater", "Error checking for updates: " + e.getMessage());

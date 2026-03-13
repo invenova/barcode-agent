@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.FileOutputStream;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class BarcodeAgentApp {
 
@@ -27,27 +29,30 @@ public class BarcodeAgentApp {
     private static NativeTray buildTray(HttpApiServer server) throws Exception {
         String iconPath = extractIcon();
 
-        NativeTray[] trayHolder = new NativeTray[1];
+        AtomicReference<NativeTray> trayRef = new AtomicReference<>();
+        AtomicBoolean shutdownCalled = new AtomicBoolean(false);
+
+        Runnable shutdown = () -> {
+            if (!shutdownCalled.compareAndSet(false, true)) return;
+            autoUpdater.shutdown();
+            server.stop();
+            NativeTray t = trayRef.get();
+            if (t != null) t.shutdown();
+        };
 
         List<NativeTray.MenuItem> items = List.of(
                 NativeTray.MenuItem.disabled("Version: " + autoUpdater.getCurrentVersion()),
                 NativeTray.MenuItem.separator(),
                 NativeTray.MenuItem.item("Exit", () -> {
-                    autoUpdater.shutdown();
-                    server.stop();
-                    if (trayHolder[0] != null) trayHolder[0].shutdown();
+                    shutdown.run();
                     System.exit(0);
                 })
         );
 
         NativeTray tray = new NativeTray("Invenova Barcode Agent", iconPath, items);
-        trayHolder[0] = tray;
+        trayRef.set(tray);
 
-        autoUpdater.setBeforeExit(() -> {
-            autoUpdater.shutdown();
-            server.stop();
-            tray.shutdown();
-        });
+        autoUpdater.setBeforeExit(shutdown);
         autoUpdater.setOnStatusMessage(tray::setStatus);
 
         tray.setStatus("Running on port " + PORT + ".");
