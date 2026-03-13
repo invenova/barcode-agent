@@ -229,7 +229,7 @@ public class AutoUpdater {
     private Path writeUpdateScript(Path currentJar, Path stagedJar) throws IOException {
         Path script = appDir.resolve(IS_WINDOWS ? "update.bat" : "update.sh");
 
-        String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+        String javaBin = Path.of(System.getProperty("java.home"), "bin", IS_WINDOWS ? "javaw" : "java").toString();
         long pid = ProcessHandle.current().pid();
 
         if (IS_WINDOWS) {
@@ -274,9 +274,15 @@ public class AutoUpdater {
     }
 
     private void launchUpdateScript(Path script) throws IOException {
-        ProcessBuilder pb = IS_WINDOWS
-                ? new ProcessBuilder("cmd.exe", "/c", "start", "/min", "", script.toString())
-                : new ProcessBuilder("sh", script.toString());
+        ProcessBuilder pb;
+        if (IS_WINDOWS) {
+            // Run the batch completely hidden via PowerShell so no CMD window appears
+            String cmd = "Start-Process -FilePath cmd.exe -ArgumentList @('/c', '"
+                    + script.toString().replace("'", "''") + "') -WindowStyle Hidden";
+            pb = new ProcessBuilder("powershell.exe", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", cmd);
+        } else {
+            pb = new ProcessBuilder("sh", script.toString());
+        }
         pb.directory(appDir.toFile());
         pb.redirectErrorStream(true);
         pb.start();
