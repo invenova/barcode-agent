@@ -217,6 +217,14 @@ public class NativeTray {
     // ── Message loop ─────────────────────────────────────────────────────────
 
     private void messageLoop() {
+        try {
+            messageLoopImpl();
+        } catch (Throwable t) {
+            RemoteLogger.error("tray", "messageLoop crashed: " + t);
+        }
+    }
+
+    private void messageLoopImpl() {
         ExtUser32 u32 = ExtUser32.INSTANCE;
 
         // Register window class
@@ -232,6 +240,11 @@ public class NativeTray {
                 0, 0, 0, 0, 0,
                 new HWND(Pointer.createConstant(-3)), // HWND_MESSAGE
                 null, null, null);
+
+        if (hwnd == null) {
+            RemoteLogger.error("tray", "CreateWindowExW failed — hwnd is null");
+            return;
+        }
 
         // Subscribe to TaskbarCreated — Windows broadcasts this whenever the
         // taskbar shell is (re)created. Handling it lets us re-add the icon
@@ -249,11 +262,17 @@ public class NativeTray {
             }
         }
         if (hIcon == null) {
+            RemoteLogger.info("tray", "Custom icon not loaded — falling back to IDI_APPLICATION");
             hIcon = u32.LoadIcon(null, IDI_APPLICATION);
+        }
+        if (hIcon == null) {
+            RemoteLogger.error("tray", "LoadIcon(IDI_APPLICATION) failed — proceeding without icon");
         }
 
         // Build the NOTIFYICONDATA once so it can be reused by TaskbarCreated.
+        // cbSize must equal sizeof(NOTIFYICONDATA) for Shell32.dll 6.0.6+ (Vista+).
         nid = new NOTIFYICONDATA();
+        RemoteLogger.info("tray", "NOTIFYICONDATA cbSize=" + nid.cbSize);
         nid.hWnd             = hwnd;
         nid.uFlags           = NIF_MESSAGE | NIF_ICON | NIF_TIP;
         nid.uCallbackMessage = WM_TRAYICON;
@@ -282,10 +301,15 @@ public class NativeTray {
 
     private void addTrayIcon() {
         for (int attempt = 1; attempt <= NIM_ADD_RETRIES; attempt++) {
-            if (ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_ADD, nid)) return;
+            if (ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_ADD, nid)) {
+                RemoteLogger.info("tray", "NIM_ADD succeeded on attempt " + attempt);
+                return;
+            }
+            int err = Native.getLastError();
+            RemoteLogger.error("tray", "NIM_ADD attempt " + attempt + " failed — Win32 error " + err);
             try { Thread.sleep(NIM_ADD_RETRY_DELAY); } catch (InterruptedException ignored) {}
         }
-        // Exhausted retries — TaskbarCreated will fire once Explorer is ready.
+        RemoteLogger.error("tray", "NIM_ADD exhausted all " + NIM_ADD_RETRIES + " retries — waiting for TaskbarCreated");
     }
 
     private LRESULT handleMsg(HWND hwnd, int msg, WPARAM wp, LPARAM lp) {
