@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 
 public class AutoUpdater {
 
-    private static final String GITHUB_REPO = "Uddhika/invenova-barcode-print-agent";
+    private static final String GITHUB_REPO = "invenova/barcode-agent";
     private static final String GITHUB_API_URL =
             "https://api.github.com/repos/" + GITHUB_REPO + "/releases/latest";
     private static final long CHECK_INTERVAL_HOURS = 6;
