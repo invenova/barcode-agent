@@ -71,7 +71,6 @@ public class NativeTray {
         HICON LoadImageW(HINSTANCE hinst, WString name, int type, int cx, int cy, int fuLoad);
         HICON LoadIcon(HINSTANCE hInstance, Pointer iconName);
         boolean DestroyIcon(HICON icon);
-        int RegisterWindowMessageW(WString lpString);
     }
 
     interface ExtShell32 extends StdCallLibrary {
@@ -159,7 +158,6 @@ public class NativeTray {
     private HICON             hIcon;
     private NOTIFYICONDATA    nid;
     private volatile String   statusText = "";
-    private int               wmTaskbarCreated = 0;
 
     public NativeTray(String tooltip, String iconPath, List<MenuItem> menuItems) {
         this.tooltip   = tooltip;
@@ -210,10 +208,6 @@ public class NativeTray {
                 new HWND(Pointer.createConstant(-3)), // HWND_MESSAGE
                 null, null, null);
 
-        // Register for TaskbarCreated so we can re-add the icon if Explorer restarts
-        // or wasn't ready yet when the app started at Windows startup.
-        wmTaskbarCreated = u32.RegisterWindowMessageW(new WString("TaskbarCreated"));
-
         // Load icon — request 16x16 (tray icon size) explicitly.
         // LR_DEFAULTSIZE requests SM_CXICON (32x32) which is wrong for the tray.
         // Fall back to IDI_APPLICATION if the custom icon fails to load.
@@ -227,21 +221,14 @@ public class NativeTray {
             hIcon = u32.LoadIcon(null, IDI_APPLICATION);
         }
 
-        // Register tray icon — retry up to 10 times (500 ms apart) in case the
-        // taskbar isn't ready yet (common when launching at Windows startup).
+        // Register tray icon
         nid = new NOTIFYICONDATA();
         nid.hWnd            = hwnd;
         nid.uFlags          = NIF_MESSAGE | NIF_ICON | NIF_TIP;
         nid.uCallbackMessage = WM_TRAYICON;
         nid.hIcon           = hIcon;
         setTip(nid, tooltip);
-        boolean added = false;
-        for (int attempt = 0; attempt < 10 && !added; attempt++) {
-            added = ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_ADD, nid);
-            if (!added) {
-                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
-            }
-        }
+        ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_ADD, nid);
 
         // Message pump
         MSG msg = new MSG();
@@ -267,12 +254,6 @@ public class NativeTray {
         }
         if (msg == WM_DESTROY) {
             User32.INSTANCE.PostQuitMessage(0);
-            return new LRESULT(0);
-        }
-        // Re-add the tray icon whenever Explorer (re)creates the taskbar.
-        // This handles the startup race condition and Explorer crashes/restarts.
-        if (wmTaskbarCreated != 0 && msg == wmTaskbarCreated && nid != null) {
-            ExtShell32.INSTANCE.Shell_NotifyIconW(NIM_ADD, nid);
             return new LRESULT(0);
         }
         return u32.DefWindowProcW(hwnd, msg, wp, lp);
