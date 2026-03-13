@@ -237,7 +237,7 @@ public class NativeTray {
             WNDCLASSEX wc = new WNDCLASSEX();
             wc.hInstance     = hInst;
             wc.lpfnWndProc   = wndProcRef;
-            wc.lpszClassName = new WString("BarcodeAgentTray");
+            wc.lpszClassName = new WString("InvenovaBarcodeAgentTray");
             int atom = u32.RegisterClassExW(wc);
             if (atom == 0) {
                 int err = Native.getLastError();
@@ -253,7 +253,7 @@ public class NativeTray {
             //   • WS_EX_TOOLWINDOW keeps it out of Alt-Tab and the taskbar strip.
             //   • dwStyle=0 (no WS_VISIBLE) keeps it invisible.
             hwnd = u32.CreateWindowExW(WS_EX_TOOLWINDOW,
-                    new WString("BarcodeAgentTray"), new WString(""),
+                    new WString("InvenovaBarcodeAgentTray"), new WString(""),
                     0, 0, 0, 0, 0,
                     null, null, hInst, null);
             if (hwnd == null) {

@@ -74,16 +74,16 @@ jobs:
             --output target\jre-minimal
 
           jpackage `
-            --input target --name BarcodeAgent `
+            --input target --name "Invenova Barcode Agent" `
             --main-jar invenova-barcode-print-agent-${{ steps.version.outputs.VERSION }}.jar `
             --main-class com.invenova.barcode.BarcodeAgentApp `
             --type exe --dest target/installer --runtime-image target\jre-minimal `
             --icon src\main\resources\icon.ico `
             --java-options "-Xmx512m" `
             --win-menu --win-menu-group "Invenova" --win-shortcut --win-per-user-install `
-            --vendor "Invenova" --description "Barcode Print Agent" `
+            --vendor "Invenova" --description "Invenova Barcode Agent" `
             --app-version "${{ steps.version.outputs.VERSION }}"
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: target/installer/BarcodeAgent*.exe
+          files: target/installer/Invenova*.exe

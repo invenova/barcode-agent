@@ -65,16 +65,16 @@ jobs:
             --output target\jre-minimal
 
           jpackage `
-            --input target --name BarcodeAgent `
+            --input target --name "Invenova Barcode Agent" `
             --main-jar $mainJar --main-class com.invenova.barcode.BarcodeAgentApp `
             --type exe --dest target/installer --runtime-image target\jre-minimal `
             --icon src\main\resources\icon.ico `
             --java-options "-Xmx512m" `
             --win-menu --win-menu-group "Invenova" --win-shortcut --win-per-user-install `
-            --vendor "Invenova" --description "Barcode Print Agent" --app-version $version
+            --vendor "Invenova" --description "Invenova Barcode Agent" --app-version $version
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BarcodeAgent-Windows-Installer
-          path: target/installer/BarcodeAgent*.exe
+          name: Invenova-Barcode-Agent-Windows-Installer
+          path: target/installer/Invenova*.exe
           retention-days: 30
