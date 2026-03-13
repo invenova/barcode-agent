@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.FileOutputStream;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class BarcodeAgentApp {
 
@@ -28,48 +27,22 @@ public class BarcodeAgentApp {
     private static NativeTray buildTray(HttpApiServer server) throws Exception {
         String iconPath = extractIcon();
 
-        AtomicReference<NativeTray> trayRef = new AtomicReference<>();
-
-        NativeTray.MenuItem startupItem = NativeTray.MenuItem.item(
-                startupLabel(),
-                () -> {
-                    if (StartupManager.isStartupEnabled()) StartupManager.disableStartup();
-                    else                                   StartupManager.enableStartup();
-                    // label can't be mutated after build; user sees updated label on next open
-                });
-
         List<NativeTray.MenuItem> items = List.of(
                 NativeTray.MenuItem.disabled("Version: " + autoUpdater.getCurrentVersion()),
-                NativeTray.MenuItem.separator(),
-                NativeTray.MenuItem.item("Check for Updates", () -> {
-                    NativeTray t = trayRef.get();
-                    if (t != null) t.setStatus("Checking for updates...");
-                    autoUpdater.checkNow();
-                }),
-                NativeTray.MenuItem.item("Restart & Update", false, () -> autoUpdater.applyUpdate(() -> {
-                    autoUpdater.shutdown();
-                    server.stop();
-                    NativeTray t = trayRef.get();
-                    if (t != null) t.shutdown();
-                })),
-                NativeTray.MenuItem.separator(),
-                startupItem,
                 NativeTray.MenuItem.separator(),
                 NativeTray.MenuItem.item("Exit", () -> {
                     autoUpdater.shutdown();
                     server.stop();
-                    NativeTray t = trayRef.get();
-                    if (t != null) t.shutdown();
                     System.exit(0);
                 })
         );
 
         NativeTray tray = new NativeTray("Invenova Barcode Agent", iconPath, items);
-        trayRef.set(tray);
 
-        autoUpdater.setOnUpdateDownloaded(version -> {
-            tray.updateItem("Restart & Update", true);
-            tray.setStatus("Update v" + version + " ready — click Restart & Update");
+        autoUpdater.setBeforeExit(() -> {
+            autoUpdater.shutdown();
+            server.stop();
+            tray.shutdown();
         });
         autoUpdater.setOnStatusMessage(tray::setStatus);
 
@@ -92,7 +65,4 @@ public class BarcodeAgentApp {
         }
     }
 
-    private static String startupLabel() {
-        return (StartupManager.isStartupEnabled() ? "\u2713 " : "") + "Run on Windows startup";
-    }
 }
