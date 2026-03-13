@@ -42,6 +42,12 @@ public class BarcodeAgentApp {
         List<NativeTray.MenuItem> items = List.of(
                 NativeTray.MenuItem.disabled("Version: " + autoUpdater.getCurrentVersion()),
                 NativeTray.MenuItem.separator(),
+                NativeTray.MenuItem.item("Check for Updates", () -> {
+                    NativeTray t = trayRef.get();
+                    if (t != null) t.setStatus("Checking for updates...");
+                    autoUpdater.checkNow();
+                }),
+                NativeTray.MenuItem.separator(),
                 NativeTray.MenuItem.item("Exit", () -> {
                     shutdown.run();
                     System.exit(0);

@@ -76,6 +76,10 @@ public class AutoUpdater {
         scheduler.scheduleWithFixedDelay(this::checkAndDownload, 0, CHECK_INTERVAL_HOURS, TimeUnit.HOURS);
     }
 
+    public void checkNow() {
+        scheduler.execute(this::checkAndDownload);
+    }
+
     public void shutdown() {
         scheduler.shutdownNow();
     }
