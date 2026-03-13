@@ -1,0 +1,80 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-jar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build JAR
+        id: build
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          mvn clean package -DskipTests
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jar-artifact
+          path: target/invenova-barcode-print-agent-${{ steps.build.outputs.VERSION }}.jar
+
+  build-windows-installer:
+    needs: build-jar
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: jar-artifact
+          path: target/
+
+      - name: Build minimal JRE and Windows installer
+        run: |
+          $mainJar = (Get-ChildItem target\*.jar | Select-Object -First 1).Name
+          $version  = ($mainJar -replace '^invenova-barcode-print-agent-(.+)\.jar$', '$1') -replace '-.*$', ''
+
+          jlink `
+            --add-modules java.base,jdk.httpserver,java.net.http,java.logging,jdk.crypto.ec,jdk.localedata `
+            --strip-debug --no-header-files --no-man-pages --include-locales en `
+            --output target\jre-minimal
+
+          jpackage `
+            --input target --name BarcodeAgent `
+            --main-jar $mainJar --main-class com.invenova.barcode.BarcodeAgentApp `
+            --type exe --dest target/installer --runtime-image target\jre-minimal `
+            --icon src\main\resources\icon.ico `
+            --java-options "-Xmx512m" `
+            --win-menu --win-menu-group "Invenova" --win-shortcut --win-per-user-install `
+            --vendor "Invenova" --description "Barcode Print Agent" --app-version $version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BarcodeAgent-Windows-Installer
+          path: target/installer/BarcodeAgent*.exe
+          retention-days: 30

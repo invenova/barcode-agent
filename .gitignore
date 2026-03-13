@@ -1,0 +1,11 @@
+target/
+*.class
+*.jar
+!src/**/*.jar
+.idea/
+*.iml
+.DS_Store
+update/
+update.bat
+update.sh
+dependency-reduced-pom.xml
