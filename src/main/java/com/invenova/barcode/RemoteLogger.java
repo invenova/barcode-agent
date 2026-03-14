@@ -7,7 +7,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Fire-and-forget logger that POSTs structured log entries to the
@@ -28,12 +27,6 @@ public final class RemoteLogger {
     });
 
     private RemoteLogger() {}
-
-    /** Blocks until all queued log entries are sent (or 5 s timeout). Call before System.exit(). */
-    public static void flush() {
-        POOL.shutdown();
-        try { POOL.awaitTermination(5, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
-    }
 
     public static void info(String source, String message) {
         send("INFO", source, message);
