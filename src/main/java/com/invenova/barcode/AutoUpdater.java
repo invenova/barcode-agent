@@ -85,21 +85,32 @@ public class AutoUpdater {
 
     public boolean applyUpdate() {
         Path stagedJar = findStagedJar();
-        if (stagedJar == null) return false;
+        if (stagedJar == null) {
+            RemoteLogger.error("auto-updater", "applyUpdate: no staged JAR found in " + updateDir);
+            return false;
+        }
 
         if (jarPath == null) {
-            RemoteLogger.error("auto-updater", "Cannot determine current JAR path. Skipping update.");
+            RemoteLogger.error("auto-updater", "applyUpdate: cannot determine current JAR path.");
             return false;
         }
 
         try {
+            String exePath = StartupManager.getExePath().orElse("(unknown)");
+            RemoteLogger.info("auto-updater", "applyUpdate: jarPath=" + jarPath
+                    + " stagedJar=" + stagedJar + " exe=" + exePath);
+
             Path script = writeUpdateScript(jarPath, stagedJar);
+            RemoteLogger.info("auto-updater", "applyUpdate: script written to " + script);
+
             launchUpdateScript(script);
+            RemoteLogger.info("auto-updater", "applyUpdate: script launched, exiting JVM...");
+
             if (beforeExit != null) beforeExit.run();
             System.exit(0);
             return true;
         } catch (IOException e) {
-            RemoteLogger.error("auto-updater", "Failed to launch update script: " + e.getMessage());
+            RemoteLogger.error("auto-updater", "applyUpdate: failed — " + e.getMessage());
             return false;
         }
     }
@@ -109,6 +120,17 @@ public class AutoUpdater {
         deleteQuietly(jarPath.resolveSibling(jarPath.getFileName() + ".backup"));
         deleteQuietly(appDir.resolve(IS_WINDOWS ? "update.bat" : "update.sh"));
         cleanDirectory(updateDir, ".tmp");
+
+        Path log = appDir.resolve("update-log.txt");
+        if (Files.exists(log)) {
+            try {
+                String content = Files.readString(log);
+                RemoteLogger.info("auto-updater", "update-script-log:\n" + content);
+            } catch (IOException e) {
+                RemoteLogger.error("auto-updater", "Failed to read update-log.txt: " + e.getMessage());
+            }
+            deleteQuietly(log);
+        }
     }
 
     // ---- Update check & download ----
@@ -236,26 +258,37 @@ public class AutoUpdater {
         String exePath = StartupManager.getExePath().orElseThrow(() ->
                 new IOException("Cannot determine exe path for restart"));
         String restartCmd;
+        Path log = appDir.resolve("update-log.txt");
         if (IS_WINDOWS) {
             restartCmd = "start \"\" \"" + exePath + "\"";
             String content = String.join("\r\n",
                     "@echo off",
-                    "echo Waiting for process " + pid + " to exit...",
+                    "echo [1] Waiting for process " + pid + " to exit... >> \"" + log + "\"",
                     ":wait_loop",
                     "tasklist /FI \"PID eq " + pid + "\" 2>NUL | find /I \"" + pid + "\" >NUL",
                     "if not errorlevel 1 (",
                     "    timeout /t 1 /nobreak >NUL",
                     "    goto wait_loop",
                     ")",
-                    "echo Waiting for file handles to release...",
+                    "echo [2] Process exited. Waiting for file handles to release... >> \"" + log + "\"",
                     "timeout /t 3 /nobreak >NUL",
-                    "echo Applying update...",
+                    "echo [3] Backing up current JAR... >> \"" + log + "\"",
                     "if exist \"" + currentJar + "\" (",
                     "    move /Y \"" + currentJar + "\" \"" + currentJar + ".backup\"",
+                    "    echo [3] Backup OK >> \"" + log + "\"",
+                    ") else (",
+                    "    echo [3] WARNING: current JAR not found >> \"" + log + "\"",
                     ")",
+                    "echo [4] Moving staged JAR to target... >> \"" + log + "\"",
                     "move /Y \"" + stagedJar + "\" \"" + currentJar + "\"",
-                    "echo Starting updated application...",
+                    "if errorlevel 1 (",
+                    "    echo [4] ERROR: move failed >> \"" + log + "\"",
+                    ") else (",
+                    "    echo [4] Move OK >> \"" + log + "\"",
+                    ")",
+                    "echo [5] Launching: " + restartCmd + " >> \"" + log + "\"",
                     restartCmd,
+                    "echo [6] Launch command issued >> \"" + log + "\"",
                     "exit"
             );
             Files.writeString(script, content);
@@ -263,16 +296,19 @@ public class AutoUpdater {
             restartCmd = "\"" + exePath + "\" &";
             String content = String.join("\n",
                     "#!/bin/sh",
-                    "echo 'Waiting for process " + pid + " to exit...'",
+                    "echo '[1] Waiting for process " + pid + " to exit...' >> '" + log + "'",
                     "while kill -0 " + pid + " 2>/dev/null; do sleep 1; done",
+                    "echo '[2] Process exited. Sleeping 3s...' >> '" + log + "'",
                     "sleep 3",
-                    "echo 'Applying update...'",
+                    "echo '[3] Backing up current JAR...' >> '" + log + "'",
                     "if [ -f '" + currentJar + "' ]; then",
-                    "    mv '" + currentJar + "' '" + currentJar + ".backup'",
+                    "    mv '" + currentJar + "' '" + currentJar + ".backup' && echo '[3] Backup OK' >> '" + log + "'",
                     "fi",
-                    "mv '" + stagedJar + "' '" + currentJar + "'",
-                    "echo 'Starting updated application...'",
+                    "echo '[4] Moving staged JAR...' >> '" + log + "'",
+                    "mv '" + stagedJar + "' '" + currentJar + "' && echo '[4] Move OK' >> '" + log + "' || echo '[4] ERROR: move failed' >> '" + log + "'",
+                    "echo '[5] Launching: " + restartCmd + "' >> '" + log + "'",
                     restartCmd,
+                    "echo '[6] Launch command issued' >> '" + log + "'",
                     "exit 0"
             );
             Files.writeString(script, content);
