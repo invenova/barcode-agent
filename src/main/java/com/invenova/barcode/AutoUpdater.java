@@ -27,9 +27,6 @@ public class AutoUpdater {
     private static final long CHECK_INTERVAL_HOURS = 1;
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration DOWNLOAD_TIMEOUT = Duration.ofMinutes(5);
-    private static final boolean IS_WINDOWS =
-            System.getProperty("os.name", "").toLowerCase().contains("win");
-
     private final Path jarPath;
     private final Path appDir;
     private final Path updateDir;
@@ -107,7 +104,7 @@ public class AutoUpdater {
     public void cleanupAfterUpdate() {
         if (jarPath == null) return;
         deleteQuietly(jarPath.resolveSibling(jarPath.getFileName() + ".backup"));
-        deleteQuietly(appDir.resolve(IS_WINDOWS ? "update.bat" : "update.sh"));
+        deleteQuietly(appDir.resolve("update.bat"));
         cleanDirectory(updateDir, ".tmp");
     }
 
@@ -228,59 +225,34 @@ public class AutoUpdater {
     }
 
     private Path writeUpdateScript(Path currentJar, Path stagedJar) throws IOException {
-        Path script = appDir.resolve(IS_WINDOWS ? "update.bat" : "update.sh");
+        Path script = appDir.resolve("update.bat");
         long pid = ProcessHandle.current().pid();
 
         String exePath = StartupManager.getExePath().orElseThrow(() ->
                 new IOException("Cannot determine exe path for restart"));
-        String restartCmd;
-        if (IS_WINDOWS) {
-            restartCmd = "explorer.exe \"" + exePath + "\"";
-            String content = String.join("\r\n",
-                    "@echo off",
-                    ":wait_loop",
-                    "tasklist /FI \"PID eq " + pid + "\" 2>NUL | find /I \"" + pid + "\" >NUL",
-                    "if not errorlevel 1 (",
-                    "    timeout /t 1 /nobreak >NUL",
-                    "    goto wait_loop",
-                    ")",
-                    "timeout /t 3 /nobreak >NUL",
-                    "if exist \"" + currentJar + "\" move /Y \"" + currentJar + "\" \"" + currentJar + ".backup\"",
-                    "move /Y \"" + stagedJar + "\" \"" + currentJar + "\"",
-                    restartCmd,
-                    "exit"
-            );
-            Files.writeString(script, content);
-        } else {
-            restartCmd = "\"" + exePath + "\" &";
-            String content = String.join("\n",
-                    "#!/bin/sh",
-                    "while kill -0 " + pid + " 2>/dev/null; do sleep 1; done",
-                    "sleep 3",
-                    "if [ -f '" + currentJar + "' ]; then mv '" + currentJar + "' '" + currentJar + ".backup'; fi",
-                    "mv '" + stagedJar + "' '" + currentJar + "'",
-                    restartCmd,
-                    "exit 0"
-            );
-            Files.writeString(script, content);
-            script.toFile().setExecutable(true);
-        }
 
+        String content = String.join("\r\n",
+                "@echo off",
+                ":wait_loop",
+                "tasklist /FI \"PID eq " + pid + "\" 2>NUL | find /I \"" + pid + "\" >NUL",
+                "if not errorlevel 1 (",
+                "    timeout /t 1 /nobreak >NUL",
+                "    goto wait_loop",
+                ")",
+                "timeout /t 3 /nobreak >NUL",
+                "if exist \"" + currentJar + "\" move /Y \"" + currentJar + "\" \"" + currentJar + ".backup\"",
+                "move /Y \"" + stagedJar + "\" \"" + currentJar + "\"",
+                "explorer.exe \"" + exePath + "\"",
+                "exit"
+        );
+        Files.writeString(script, content);
         return script;
     }
 
     private void launchUpdateScript(Path script) throws IOException {
-        ProcessBuilder pb;
-        if (IS_WINDOWS) {
-            // Use cmd /c start to launch the bat in a detached minimised window,
-            // independent of this JVM process.
-            pb = new ProcessBuilder("cmd.exe", "/c", "start", "/min", "", script.toAbsolutePath().toString());
-        } else {
-            pb = new ProcessBuilder("sh", script.toString());
-        }
-        pb.directory(appDir.toFile());
-        pb.redirectErrorStream(true);
-        pb.start();
+        new ProcessBuilder("cmd.exe", "/c", "start", "/min", "", script.toAbsolutePath().toString())
+                .directory(appDir.toFile())
+                .start();
     }
 
     // ---- Version comparison ----
