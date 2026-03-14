@@ -27,7 +27,6 @@ public class AutoUpdater {
     private static final long CHECK_INTERVAL_HOURS = 1;
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration DOWNLOAD_TIMEOUT = Duration.ofMinutes(5);
-    private static final String JVM_OPTIONS = "-Xmx512m";
     private static final boolean IS_WINDOWS =
             System.getProperty("os.name", "").toLowerCase().contains("win");
 
@@ -234,17 +233,11 @@ public class AutoUpdater {
         Path script = appDir.resolve(IS_WINDOWS ? "update.bat" : "update.sh");
         long pid = ProcessHandle.current().pid();
 
-        // Prefer restarting via the native exe launcher (jpackage install);
-        // fall back to javaw -jar for bare-JAR deployments.
-        java.util.Optional<String> exePath = StartupManager.getExePath();
+        String exePath = StartupManager.getExePath().orElseThrow(() ->
+                new IOException("Cannot determine exe path for restart"));
         String restartCmd;
         if (IS_WINDOWS) {
-            if (exePath.isPresent()) {
-                restartCmd = "start \"\" \"" + exePath.get() + "\"";
-            } else {
-                String javaBin = Path.of(System.getProperty("java.home"), "bin", "javaw").toString();
-                restartCmd = "start \"\" \"" + javaBin + "\" " + JVM_OPTIONS + " -jar \"" + currentJar + "\"";
-            }
+            restartCmd = "start \"\" \"" + exePath + "\"";
             String content = String.join("\r\n",
                     "@echo off",
                     "echo Waiting for process " + pid + " to exit...",
@@ -267,12 +260,7 @@ public class AutoUpdater {
             );
             Files.writeString(script, content);
         } else {
-            if (exePath.isPresent()) {
-                restartCmd = "\"" + exePath.get() + "\" &";
-            } else {
-                String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();
-                restartCmd = "\"" + javaBin + "\" " + JVM_OPTIONS + " -jar '" + currentJar + "' &";
-            }
+            restartCmd = "\"" + exePath + "\" &";
             String content = String.join("\n",
                     "#!/bin/sh",
                     "echo 'Waiting for process " + pid + " to exit...'",
