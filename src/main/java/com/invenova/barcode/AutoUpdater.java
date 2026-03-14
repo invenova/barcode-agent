@@ -107,6 +107,7 @@ public class AutoUpdater {
             RemoteLogger.info("auto-updater", "applyUpdate: script launched, exiting JVM...");
 
             if (beforeExit != null) beforeExit.run();
+            RemoteLogger.flush();
             System.exit(0);
             return true;
         } catch (IOException e) {
