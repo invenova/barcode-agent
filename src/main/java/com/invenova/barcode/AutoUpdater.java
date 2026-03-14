@@ -232,11 +232,19 @@ public class AutoUpdater {
 
     private Path writeUpdateScript(Path currentJar, Path stagedJar) throws IOException {
         Path script = appDir.resolve(IS_WINDOWS ? "update.bat" : "update.sh");
-
-        String javaBin = Path.of(System.getProperty("java.home"), "bin", IS_WINDOWS ? "javaw" : "java").toString();
         long pid = ProcessHandle.current().pid();
 
+        // Prefer restarting via the native exe launcher (jpackage install);
+        // fall back to javaw -jar for bare-JAR deployments.
+        java.util.Optional<String> exePath = StartupManager.getExePath();
+        String restartCmd;
         if (IS_WINDOWS) {
+            if (exePath.isPresent()) {
+                restartCmd = "start \"\" \"" + exePath.get() + "\"";
+            } else {
+                String javaBin = Path.of(System.getProperty("java.home"), "bin", "javaw").toString();
+                restartCmd = "start \"\" \"" + javaBin + "\" " + JVM_OPTIONS + " -jar \"" + currentJar + "\"";
+            }
             String content = String.join("\r\n",
                     "@echo off",
                     "echo Waiting for process " + pid + " to exit...",
@@ -246,28 +254,37 @@ public class AutoUpdater {
                     "    timeout /t 1 /nobreak >NUL",
                     "    goto wait_loop",
                     ")",
+                    "echo Waiting for file handles to release...",
+                    "timeout /t 3 /nobreak >NUL",
                     "echo Applying update...",
                     "if exist \"" + currentJar + "\" (",
                     "    move /Y \"" + currentJar + "\" \"" + currentJar + ".backup\"",
                     ")",
                     "move /Y \"" + stagedJar + "\" \"" + currentJar + "\"",
                     "echo Starting updated application...",
-                    "start \"\" \"" + javaBin + "\" " + JVM_OPTIONS + " -jar \"" + currentJar + "\"",
+                    restartCmd,
                     "exit"
             );
             Files.writeString(script, content);
         } else {
+            if (exePath.isPresent()) {
+                restartCmd = "\"" + exePath.get() + "\" &";
+            } else {
+                String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+                restartCmd = "\"" + javaBin + "\" " + JVM_OPTIONS + " -jar '" + currentJar + "' &";
+            }
             String content = String.join("\n",
                     "#!/bin/sh",
                     "echo 'Waiting for process " + pid + " to exit...'",
                     "while kill -0 " + pid + " 2>/dev/null; do sleep 1; done",
+                    "sleep 3",
                     "echo 'Applying update...'",
                     "if [ -f '" + currentJar + "' ]; then",
                     "    mv '" + currentJar + "' '" + currentJar + ".backup'",
                     "fi",
                     "mv '" + stagedJar + "' '" + currentJar + "'",
                     "echo 'Starting updated application...'",
-                    "\"" + javaBin + "\" " + JVM_OPTIONS + " -jar '" + currentJar + "' &",
+                    restartCmd,
                     "exit 0"
             );
             Files.writeString(script, content);
