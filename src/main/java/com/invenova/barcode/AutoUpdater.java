@@ -108,7 +108,6 @@ public class AutoUpdater {
         if (jarPath == null) return;
         deleteQuietly(jarPath.resolveSibling(jarPath.getFileName() + ".backup"));
         deleteQuietly(appDir.resolve(IS_WINDOWS ? "update.bat" : "update.sh"));
-        deleteQuietly(appDir.resolve("update-log.txt"));
         cleanDirectory(updateDir, ".tmp");
     }
 
@@ -144,8 +143,6 @@ public class AutoUpdater {
             String safeVersion = latestVersion.replaceAll("[^a-zA-Z0-9._-]", "_");
 
             if (downloadUpdate(downloadUrl, safeVersion)) {
-                RemoteLogger.info("auto-updater", "Auto-applying update v" + latestVersion + "...");
-                notifyStatus("Applying update v" + latestVersion + ". Restarting...");
                 applyUpdate();
             }
         } catch (Exception e) {
