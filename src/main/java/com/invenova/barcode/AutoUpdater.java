@@ -322,10 +322,9 @@ public class AutoUpdater {
     private void launchUpdateScript(Path script) throws IOException {
         ProcessBuilder pb;
         if (IS_WINDOWS) {
-            // Run the batch completely hidden via PowerShell so no CMD window appears
-            String cmd = "Start-Process -FilePath cmd.exe -ArgumentList @('/c', '"
-                    + script.toString().replace("'", "''") + "') -WindowStyle Hidden";
-            pb = new ProcessBuilder("powershell.exe", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", cmd);
+            // Use cmd /c start to launch the bat in a detached minimised window,
+            // independent of this JVM process.
+            pb = new ProcessBuilder("cmd.exe", "/c", "start", "/min", "", script.toAbsolutePath().toString());
         } else {
             pb = new ProcessBuilder("sh", script.toString());
         }
