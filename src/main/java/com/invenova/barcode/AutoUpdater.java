@@ -238,7 +238,7 @@ public class AutoUpdater {
                 new IOException("Cannot determine exe path for restart"));
         String restartCmd;
         if (IS_WINDOWS) {
-            restartCmd = "start \"\" \"" + exePath + "\"";
+            restartCmd = "explorer.exe \"" + exePath + "\"";
             String content = String.join("\r\n",
                     "@echo off",
                     ":wait_loop",
