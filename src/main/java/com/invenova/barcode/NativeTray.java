@@ -5,7 +5,6 @@ import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 import com.sun.jna.WString;
 import com.sun.jna.platform.win32.User32;
-import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinDef.HBRUSH;
 import com.sun.jna.platform.win32.WinDef.HCURSOR;
 import com.sun.jna.platform.win32.WinDef.HICON;
@@ -16,7 +15,6 @@ import com.sun.jna.platform.win32.WinDef.LPARAM;
 import com.sun.jna.platform.win32.WinDef.LRESULT;
 import com.sun.jna.platform.win32.WinDef.POINT;
 import com.sun.jna.platform.win32.WinDef.WPARAM;
-import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.MSG;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
@@ -69,25 +67,25 @@ public class NativeTray {
     interface ExtUser32 extends StdCallLibrary {
         ExtUser32 INSTANCE = Native.load("user32", ExtUser32.class, W32APIOptions.DEFAULT_OPTIONS);
 
-        WinDef.HWND CreateWindowExW(int dwExStyle, WString lpClassName, WString lpWindowName,
-                                    int dwStyle, int x, int y, int nWidth, int nHeight,
-                                    WinDef.HWND hWndParent, WinDef.HMENU hMenu, WinDef.HINSTANCE hInstance, Pointer lpParam);
+        HWND     CreateWindowExW(int dwExStyle, WString lpClassName, WString lpWindowName,
+                                 int dwStyle, int x, int y, int nWidth, int nHeight,
+                                 HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, Pointer lpParam);
         int      RegisterClassExW(WNDCLASSEX lpwcx);
-        boolean  DestroyWindow(WinDef.HWND hwnd);
-        WinDef.LRESULT DefWindowProcW(WinDef.HWND hwnd, int msg, WinDef.WPARAM wParam, WinDef.LPARAM lParam);
-        boolean  PostMessageW(WinDef.HWND hwnd, int msg, WinDef.WPARAM wParam, WinDef.LPARAM lParam);
-        WinDef.LRESULT DispatchMessageW(WinUser.MSG msg);
-        boolean  TranslateMessage(WinUser.MSG msg);
-        int      GetMessageW(WinUser.MSG msg, WinDef.HWND hwnd, int min, int max);
-        boolean  GetCursorPos(WinDef.POINT pt);
-        boolean  SetForegroundWindow(WinDef.HWND hwnd);
-        WinDef.HMENU CreatePopupMenu();
-        boolean  AppendMenuW(WinDef.HMENU hMenu, int uFlags, int uIDNewItem, WString lpNewItem);
-        int      TrackPopupMenuEx(WinDef.HMENU hMenu, int uFlags, int x, int y, WinDef.HWND hwnd, Pointer tpm);
-        boolean  DestroyMenu(WinDef.HMENU hMenu);
-        WinDef.HICON LoadImageW(WinDef.HINSTANCE hinst, WString name, int type, int cx, int cy, int fuLoad);
-        WinDef.HICON LoadIcon(WinDef.HINSTANCE hInstance, Pointer iconName);
-        boolean  DestroyIcon(WinDef.HICON icon);
+        boolean  DestroyWindow(HWND hwnd);
+        LRESULT  DefWindowProcW(HWND hwnd, int msg, WPARAM wParam, LPARAM lParam);
+        boolean  PostMessageW(HWND hwnd, int msg, WPARAM wParam, LPARAM lParam);
+        LRESULT  DispatchMessageW(MSG msg);
+        boolean  TranslateMessage(MSG msg);
+        int      GetMessageW(MSG msg, HWND hwnd, int min, int max);
+        boolean  GetCursorPos(POINT pt);
+        boolean  SetForegroundWindow(HWND hwnd);
+        HMENU    CreatePopupMenu();
+        boolean  AppendMenuW(HMENU hMenu, int uFlags, int uIDNewItem, WString lpNewItem);
+        int      TrackPopupMenuEx(HMENU hMenu, int uFlags, int x, int y, HWND hwnd, Pointer tpm);
+        boolean  DestroyMenu(HMENU hMenu);
+        HICON    LoadImageW(HINSTANCE hinst, WString name, int type, int cx, int cy, int fuLoad);
+        HICON    LoadIcon(HINSTANCE hInstance, Pointer iconName);
+        boolean  DestroyIcon(HICON icon);
         int      RegisterWindowMessageW(WString lpString);
     }
 
