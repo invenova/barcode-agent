@@ -2,9 +2,10 @@ package com.invenova.barcode;
 
 import org.json.JSONObject;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,7 +19,9 @@ import java.util.concurrent.Executors;
 public final class RemoteLogger {
 
     private static final String ENDPOINT = "https://barcode-app.invenova.lk/api/agent-log";
-    private static final int TIMEOUT_MS  = 4000;
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(4))
+            .build();
 
     private static final ExecutorService POOL = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "remote-log");
@@ -45,17 +48,13 @@ public final class RemoteLogger {
 
         POOL.execute(() -> {
             try {
-                HttpURLConnection conn = (HttpURLConnection) new URL(ENDPOINT).openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-                conn.setConnectTimeout(TIMEOUT_MS);
-                conn.setReadTimeout(TIMEOUT_MS);
-                try (var os = conn.getOutputStream()) {
-                    os.write(body.getBytes(StandardCharsets.UTF_8));
-                }
-                conn.getResponseCode();
-                conn.disconnect();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(ENDPOINT))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .timeout(java.time.Duration.ofSeconds(4))
+                        .build();
+                HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.discarding());
             } catch (Exception ignored) {
                 // never block the caller on network errors
             }
