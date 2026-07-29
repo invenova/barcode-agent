@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
  */
 public final class RemoteLogger {
 
-    private static final String ENDPOINT = "https://barcode-app.invenova.lk/api/agent-log";
+    private static final String ENDPOINT = "https://barcode.invenova.lk/api/agent-log";
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(java.time.Duration.ofSeconds(4))
             .build();
