@@ -10,7 +10,7 @@ import java.util.Set;
 public class HttpUtils {
 
     private static final Set<String> ALLOWED_ORIGINS = Set.of(
-            "https://barcode-app.invenova.lk"
+            "https://barcode.invenova.lk"
     );
 
     private static void addCorsHeaders(HttpExchange exchange) {
